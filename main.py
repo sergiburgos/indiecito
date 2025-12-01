@@ -25,19 +25,14 @@ def load_system_prompt():
         with open(prompt_file_path, "r", encoding="utf-8") as f:
             return f.read()
     except FileNotFoundError:
-        print(f"Error: No se encontró el archivo 'prompt_indiecito.md' en la ruta esperada: {prompt_file_path}")
+        # Este print es útil para la depuración local
+        print(f"Error: No se encontró el archivo 'prompt_indiecito.md'")
         return "Eres un asistente servicial." # Un prompt de fallback
 
 INDIECITO_PROMPT = load_system_prompt()
 
 # Carga las variables de entorno del archivo .env
 load_dotenv()
-
-# --- Configuración de la API de Gemini ---
-try:
-    genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-except Exception as e:
-    print(f"Error configuring Gemini API: {e}")
 
 # --- Helper para extraer texto de la respuesta de forma segura ---
 def get_text_from_response(response: genai.types.GenerateContentResponse) -> str:
@@ -88,11 +83,79 @@ async def chat_handler(fastapi_request: FastAPIRequest, request: ChatRequest):
     Este endpoint recibe un mensaje y un historial, mantiene el contexto 
     y devuelve una respuesta de la IA, pudiendo usar herramientas.
     """
-    # --- PRUEBA DE DIAGNÓSTICO ---
-    # Se ignora completamente la API de Gemini y se devuelve una respuesta fija.
-    # Si ves esta respuesta, el servidor y las rutas de FastAPI funcionan.
-    response_json = {"reply": "Respuesta de prueba: El servidor está funcionando."}
-    return JSONResponse(content=response_json)
+    try:
+        # --- Configuración de la API de Gemini (Just-in-Time) ---
+        # Se mueve aquí para ser más robusto en entornos serverless.
+        api_key = os.getenv("GOOGLE_API_KEY")
+        if not api_key or api_key == "YOUR_API_KEY":
+            raise HTTPException(status_code=500, detail="Error: La clave de API de Google no está configurada en el entorno del servidor.")
+        genai.configure(api_key=api_key)
+
+        client_ip = fastapi_request.client.host
+        current_time = time.time()
+
+        # --- Lógica de Rate Limiting por IP ---
+        # Limpieza de IPs antiguas para no llenar la memoria
+        for ip, last_time in list(client_last_request_times.items()):
+            if current_time - last_time > (REQUEST_INTERVAL_SECONDS * 2):
+                del client_last_request_times[ip]
+                
+        last_request_time = client_last_request_times.get(client_ip, 0)
+        time_since_last_request = current_time - last_request_time
+        
+        if time_since_last_request < REQUEST_INTERVAL_SECONDS:
+            sleep_time = REQUEST_INTERVAL_SECONDS - time_since_last_request
+            time.sleep(sleep_time)
+        
+        client_last_request_times[client_ip] = time.time()
+
+        # --- Prepara el mensaje con el contexto de la fecha actual ---
+        current_date_str = datetime.now().strftime("%Y-%m-%d")
+        message_with_context = f"Fecha actual: {current_date_str}. Mensaje del usuario: '{request.message}'"
+
+        # El modelo ahora no usa tools, solo responde con texto o JSON de acción
+        model = genai.GenerativeModel('models/gemini-flash-latest', system_instruction=INDIECITO_PROMPT)
+        chat = model.start_chat(history=request.history)
+        response = await chat.send_message_async(message_with_context)
+        
+        reply_text = get_text_from_response(response)
+
+        if not reply_text:
+            reply_text = json.dumps({"reply": "Lo siento, no pude generar una respuesta. Por favor, intenta reformular tu pregunta."})
+        
+        # Intentar encontrar un JSON de acción, incluso si viene mezclado con texto
+        action_json = None
+        try:
+            start_idx = reply_text.find('{')
+            end_idx = reply_text.rfind('}')
+            if start_idx != -1 and end_idx != -1 and start_idx < end_idx:
+                potential_json_str = reply_text[start_idx : end_idx + 1]
+                parsed_potential_json = json.loads(potential_json_str)
+                if "action" in parsed_potential_json and "payload" in parsed_potential_json:
+                    action_json = parsed_potential_json
+                    reply_text = reply_text.replace(potential_json_str, "").strip()
+        except json.JSONDecodeError:
+            pass
+
+        if action_json:
+            return JSONResponse(content=action_json)
+        
+        if not reply_text.strip().startswith('{') or not reply_text.strip().endswith('}'):
+            reply_text = json.dumps({"reply": reply_text})
+        else:
+            try:
+                temp_parsed = json.loads(reply_text)
+                if "reply" not in temp_parsed:
+                    reply_text = json.dumps({"reply": reply_text})
+            except json.JSONDecodeError:
+                 reply_text = json.dumps({"reply": reply_text})
+
+        return JSONResponse(content=json.loads(reply_text))
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Error interno del servidor: {str(e)}")
 
 # --- Endpoints de Acciones del Calendario ---
 @app.post("/api/create_event")
