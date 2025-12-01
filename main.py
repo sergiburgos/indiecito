@@ -15,24 +15,14 @@ import traceback
 # Importar las funciones de Google Calendar
 from google_calendar import create_calendar_event, list_calendar_events, update_calendar_event, cancel_calendar_event
 
-# --- Carga del Prompt de Sistema desde archivo ---
-def load_system_prompt():
-    """Lee el contenido del prompt desde el archivo prompt_indiecito.md."""
-    prompt_file_path = '' # Inicializa para el log de error
-    try:
-        # Construye una ruta absoluta al archivo para que sea robusto en Vercel
-        base_path = os.path.dirname(os.path.abspath(__file__))
-        prompt_file_path = os.path.join(base_path, 'prompt_indiecito.md')
-        print(f"DEBUG: Attempting to load prompt from: {prompt_file_path}", flush=True)
-        with open(prompt_file_path, "r", encoding="utf-8") as f:
-            content = f.read()
-            print("DEBUG: Prompt file loaded successfully.", flush=True)
-            return content
-    except Exception as e:
-        print(f"ERROR: Failed to load 'prompt_indiecito.md' from path: {prompt_file_path}. Exception: {e}", flush=True)
-        return "Eres un asistente servicial." # Un prompt de fallback
+# --- Carga del Prompt de Sistema desde archivo (TEMPORALMENTE HARDCODEADO PARA DEBUG) ---
+INDIECITO_PROMPT = """
+# PROMPT DE SISTEMA: Indio-Bot
 
-INDIECITO_PROMPT = load_system_prompt()
+Eres **Indio-Bot**, un **Asistente de IA para la Heladería y Cafetería "El Indiecito"** de nivel experto. Tu misión es **facilitar y gestionar las reservas y responder a las consultas de los clientes de manera eficiente**.
+
+Tu persona se define por los siguientes rasgos: **Amigable, eficiente, atento, resolutivo, amable, coloquial pero educado.**
+"""
 
 # Carga las variables de entorno del archivo .env
 load_dotenv()
