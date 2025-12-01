@@ -1,4 +1,9 @@
 {
+  "functions": {
+    "api/index.py": {
+      "includeFiles": "prompt_indiecito.md"
+    }
+  },
   "builds": [
     {
       "src": "api/index.py",
