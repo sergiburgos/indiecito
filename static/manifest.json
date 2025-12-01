@@ -1,0 +1,21 @@
+{
+  "name": "Indio-Bot",
+  "short_name": "Indio-Bot",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f6f8",
+  "theme_color": "#4a90e2",
+  "description": "Asistente de IA para la Heladería y Cafetería El Indiecito.",
+  "icons": [
+    {
+      "src": "/static/icono.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/icono.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
