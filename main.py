@@ -10,20 +10,26 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
+import traceback
+
 # Importar las funciones de Google Calendar
 from google_calendar import create_calendar_event, list_calendar_events, update_calendar_event, cancel_calendar_event
 
 # --- Carga del Prompt de Sistema desde archivo ---
 def load_system_prompt():
     """Lee el contenido del prompt desde el archivo prompt_indiecito.md."""
+    prompt_file_path = '' # Inicializa para el log de error
     try:
         # Construye una ruta absoluta al archivo para que sea robusto en Vercel
         base_path = os.path.dirname(os.path.abspath(__file__))
         prompt_file_path = os.path.join(base_path, 'prompt_indiecito.md')
+        print(f"DEBUG: Attempting to load prompt from: {prompt_file_path}", flush=True)
         with open(prompt_file_path, "r", encoding="utf-8") as f:
-            return f.read()
-    except FileNotFoundError:
-        print(f"Error: No se encontró el archivo 'prompt_indiecito.md' en la ruta esperada: {prompt_file_path}")
+            content = f.read()
+            print("DEBUG: Prompt file loaded successfully.", flush=True)
+            return content
+    except Exception as e:
+        print(f"ERROR: Failed to load 'prompt_indiecito.md' from path: {prompt_file_path}. Exception: {e}", flush=True)
         return "Eres un asistente servicial." # Un prompt de fallback
 
 INDIECITO_PROMPT = load_system_prompt()
@@ -33,9 +39,14 @@ load_dotenv()
 
 # --- Configuración de la API de Gemini ---
 try:
-    genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+    print("DEBUG: Configuring Gemini API...", flush=True)
+    api_key = os.getenv("GOOGLE_API_KEY")
+    if not api_key or api_key == "YOUR_API_KEY":
+        print("ERROR: GOOGLE_API_KEY is not set or is a placeholder.", flush=True)
+    genai.configure(api_key=api_key)
+    print("DEBUG: Gemini API configured successfully.", flush=True)
 except Exception as e:
-    print(f"Error configuring Gemini API: {e}")
+    print(f"ERROR configuring Gemini API: {e}", flush=True)
 
 # --- Helper para extraer texto de la respuesta de forma segura ---
 def get_text_from_response(response: genai.types.GenerateContentResponse) -> str:
@@ -86,6 +97,7 @@ async def chat_handler(fastapi_request: FastAPIRequest, request: ChatRequest):
     Este endpoint recibe un mensaje y un historial, mantiene el contexto 
     y devuelve una respuesta de la IA, pudiendo usar herramientas.
     """
+    print("DEBUG: Entered chat_handler", flush=True)
     client_ip = fastapi_request.client.host
     current_time = time.time()
 
@@ -100,13 +112,14 @@ async def chat_handler(fastapi_request: FastAPIRequest, request: ChatRequest):
     
     if time_since_last_request < REQUEST_INTERVAL_SECONDS:
         sleep_time = REQUEST_INTERVAL_SECONDS - time_since_last_request
-        print(f"Rate limit para {client_ip}: esperando {sleep_time:.2f} segundos.")
+        print(f"Rate limit para {client_ip}: esperando {sleep_time:.2f} segundos.", flush=True)
         time.sleep(sleep_time)
     
     client_last_request_times[client_ip] = time.time()
 
     if not os.getenv("GOOGLE_API_KEY") or os.getenv("GOOGLE_API_KEY") == "YOUR_API_KEY":
         error_message = "Error: La clave de API de Google no está configurada."
+        print(f"ERROR: {error_message}", flush=True)
         raise HTTPException(status_code=500, detail=error_message)
 
     try:
@@ -115,12 +128,14 @@ async def chat_handler(fastapi_request: FastAPIRequest, request: ChatRequest):
         message_with_context = f"Fecha actual: {current_date_str}. Mensaje del usuario: '{request.message}'"
 
         # El modelo ahora no usa tools, solo responde con texto o JSON de acción
+        print("DEBUG: Preparing to call Gemini API", flush=True)
         model = genai.GenerativeModel('models/gemini-flash-latest', system_instruction=INDIECITO_PROMPT)
         chat = model.start_chat(history=request.history)
         response = await chat.send_message_async(message_with_context)
+        print("DEBUG: Gemini API call successful", flush=True)
         
         reply_text = get_text_from_response(response)
-        print(f"DEBUG: Raw reply_text from Gemini: {reply_text}") # Nuevo: Para depuración
+        print(f"DEBUG: Raw reply_text from Gemini: {reply_text}", flush=True)
 
         if not reply_text:
             reply_text = json.dumps({"reply": "Lo siento, no pude generar una respuesta. Por favor, intenta reformular tu pregunta."})
@@ -162,6 +177,8 @@ async def chat_handler(fastapi_request: FastAPIRequest, request: ChatRequest):
         return JSONResponse(content=json.loads(reply_text))
 
     except Exception as e:
+        print(f"ERROR in chat_handler: {e}", flush=True)
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Error al contactar la API de Gemini: {str(e)}")
 
 # --- Endpoints de Acciones del Calendario ---
