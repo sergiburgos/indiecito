@@ -17,11 +17,13 @@ from google_calendar import create_calendar_event, list_calendar_events, update_
 def load_system_prompt():
     """Lee el contenido del prompt desde el archivo prompt_indiecito.md."""
     try:
-        # La ruta es relativa a la ubicación de main.py
-        with open("prompt_indiecito.md", "r", encoding="utf-8") as f:
+        # Construye una ruta absoluta al archivo para que sea robusto en Vercel
+        base_path = os.path.dirname(os.path.abspath(__file__))
+        prompt_file_path = os.path.join(base_path, 'prompt_indiecito.md')
+        with open(prompt_file_path, "r", encoding="utf-8") as f:
             return f.read()
     except FileNotFoundError:
-        print("Error: No se encontró el archivo 'prompt_indiecito.md'. Asegúrate de que esté en la misma carpeta que 'main.py'.")
+        print(f"Error: No se encontró el archivo 'prompt_indiecito.md' en la ruta esperada: {prompt_file_path}")
         return "Eres un asistente servicial." # Un prompt de fallback
 
 INDIECITO_PROMPT = load_system_prompt()
