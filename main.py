@@ -1,0 +1,222 @@
+import json
+import os
+import time
+from datetime import datetime # Importa datetime
+from typing import List, Dict, Any
+import google.generativeai as genai
+from fastapi import FastAPI, HTTPException, Request as FastAPIRequest
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+from dotenv import load_dotenv
+
+# Importar las funciones de Google Calendar
+from google_calendar import create_calendar_event, list_calendar_events, update_calendar_event, cancel_calendar_event
+
+# --- Carga del Prompt de Sistema desde archivo ---
+def load_system_prompt():
+    """Lee el contenido del prompt desde el archivo prompt_indiecito.md."""
+    try:
+        # La ruta es relativa a la ubicación de main.py
+        with open("prompt_indiecito.md", "r", encoding="utf-8") as f:
+            return f.read()
+    except FileNotFoundError:
+        print("Error: No se encontró el archivo 'prompt_indiecito.md'. Asegúrate de que esté en la misma carpeta que 'main.py'.")
+        return "Eres un asistente servicial." # Un prompt de fallback
+
+INDIECITO_PROMPT = load_system_prompt()
+
+# Carga las variables de entorno del archivo .env
+load_dotenv()
+
+# --- Configuración de la API de Gemini ---
+try:
+    genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+except Exception as e:
+    print(f"Error configuring Gemini API: {e}")
+
+# --- Helper para extraer texto de la respuesta de forma segura ---
+def get_text_from_response(response: genai.types.GenerateContentResponse) -> str:
+    """Extrae de forma segura el contenido de texto de una respuesta de Gemini."""
+    if not response.parts:
+        return ""
+    # Itera sobre las partes y concatena solo el texto, ignorando otros tipos.
+    return "".join(part.text for part in response.parts if hasattr(part, "text"))
+
+# --- Rate Limiting por IP de cliente ---
+REQUEST_INTERVAL_SECONDS = 30
+client_last_request_times: Dict[str, float] = {}
+
+# --- Modelo de Datos para la Petición ---
+class ChatRequest(BaseModel):
+    message: str
+    history: List[Dict[str, Any]]
+
+# --- Modelos de Datos para Endpoints de Acciones ---
+class CreateEventRequest(BaseModel):
+    summary: str
+    start_datetime_str: str
+    end_datetime_str: str
+    description: str = None
+
+class FindEventsRequest(BaseModel):
+    time_min_str: str
+    time_max_str: str
+    query: str = None
+
+class UpdateEventRequest(BaseModel):
+    event_id: str
+    new_start_str: str = None
+    new_end_str: str = None
+    new_summary: str = None
+    new_description: str = None
+
+class CancelEventRequest(BaseModel):
+    event_id: str
+
+# --- Inicialización de la Aplicación FastAPI ---
+app = FastAPI()
+
+# --- Endpoint de la API del Chat ---
+@app.post("/api/chat")
+async def chat_handler(fastapi_request: FastAPIRequest, request: ChatRequest):
+    """
+    Este endpoint recibe un mensaje y un historial, mantiene el contexto 
+    y devuelve una respuesta de la IA, pudiendo usar herramientas.
+    """
+    client_ip = fastapi_request.client.host
+    current_time = time.time()
+
+    # --- Lógica de Rate Limiting por IP ---
+    # Limpieza de IPs antiguas para no llenar la memoria
+    for ip, last_time in list(client_last_request_times.items()):
+        if current_time - last_time > (REQUEST_INTERVAL_SECONDS * 2):
+            del client_last_request_times[ip]
+            
+    last_request_time = client_last_request_times.get(client_ip, 0)
+    time_since_last_request = current_time - last_request_time
+    
+    if time_since_last_request < REQUEST_INTERVAL_SECONDS:
+        sleep_time = REQUEST_INTERVAL_SECONDS - time_since_last_request
+        print(f"Rate limit para {client_ip}: esperando {sleep_time:.2f} segundos.")
+        time.sleep(sleep_time)
+    
+    client_last_request_times[client_ip] = time.time()
+
+    if not os.getenv("GOOGLE_API_KEY") or os.getenv("GOOGLE_API_KEY") == "YOUR_API_KEY":
+        error_message = "Error: La clave de API de Google no está configurada."
+        raise HTTPException(status_code=500, detail=error_message)
+
+    try:
+        # --- Prepara el mensaje con el contexto de la fecha actual ---
+        current_date_str = datetime.now().strftime("%Y-%m-%d")
+        message_with_context = f"Fecha actual: {current_date_str}. Mensaje del usuario: '{request.message}'"
+
+        # El modelo ahora no usa tools, solo responde con texto o JSON de acción
+        model = genai.GenerativeModel('models/gemini-flash-latest', system_instruction=INDIECITO_PROMPT)
+        chat = model.start_chat(history=request.history)
+        response = await chat.send_message_async(message_with_context)
+        
+        reply_text = get_text_from_response(response)
+        print(f"DEBUG: Raw reply_text from Gemini: {reply_text}") # Nuevo: Para depuración
+
+        if not reply_text:
+            reply_text = json.dumps({"reply": "Lo siento, no pude generar una respuesta. Por favor, intenta reformular tu pregunta."})
+        
+        # Intentar encontrar un JSON de acción, incluso si viene mezclado con texto
+        action_json = None
+        try:
+            # Buscar el primer '{' y el último '}'
+            start_idx = reply_text.find('{')
+            end_idx = reply_text.rfind('}')
+            
+            if start_idx != -1 and end_idx != -1 and start_idx < end_idx:
+                potential_json_str = reply_text[start_idx : end_idx + 1]
+                parsed_potential_json = json.loads(potential_json_str)
+                if "action" in parsed_potential_json and "payload" in parsed_potential_json:
+                    action_json = parsed_potential_json
+                    # Si se encuentra una acción, eliminamos el JSON del texto original
+                    reply_text = reply_text.replace(potential_json_str, "").strip()
+        except json.JSONDecodeError:
+            pass # No es un JSON válido, continuamos
+
+        # Si se encontró una acción, la devolvemos directamente
+        if action_json:
+            return JSONResponse(content=action_json)
+        
+        # Si no es una acción, la devolvemos como respuesta conversacional
+        # Aseguramos que la respuesta siempre sea un JSON con clave 'reply'
+        if not reply_text.strip().startswith('{') or not reply_text.strip().endswith('}'):
+            reply_text = json.dumps({"reply": reply_text})
+        else: # Si ya es un JSON pero no tenía 'action', lo devolvemos como 'reply'
+            try:
+                temp_parsed = json.loads(reply_text)
+                if "reply" not in temp_parsed: # Evitar doble anidamiento si ya es {"reply": "..."}
+                    reply_text = json.dumps({"reply": reply_text})
+            except json.JSONDecodeError:
+                 reply_text = json.dumps({"reply": reply_text})
+
+        # Devolvemos el texto JSON directamente
+        return JSONResponse(content=json.loads(reply_text))
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al contactar la API de Gemini: {str(e)}")
+
+# --- Endpoints de Acciones del Calendario ---
+@app.post("/api/create_event")
+async def api_create_event(request: CreateEventRequest):
+    try:
+        result = create_calendar_event(
+            summary=request.summary,
+            start_datetime_str=request.start_datetime_str,
+            end_datetime_str=request.end_datetime_str,
+            description=request.description,
+            attendees_emails=["indioreservas@gmail.com"]
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/find_events")
+async def api_find_events(request: FindEventsRequest):
+    try:
+        result = list_calendar_events(
+            time_min_str=request.time_min_str,
+            time_max_str=request.time_max_str,
+            query=request.query
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/update_event")
+async def api_update_event(request: UpdateEventRequest):
+    try:
+        result = update_calendar_event(
+            event_id=request.event_id,
+            new_start_str=request.new_start_str,
+            new_end_str=request.new_end_str,
+            new_summary=request.new_summary,
+            new_description=request.new_description
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/cancel_event")
+async def api_cancel_event(request: CancelEventRequest):
+    try:
+        result = cancel_calendar_event(event_id=request.event_id)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# --- Endpoint para servir el archivo HTML principal ---
+@app.get("/", response_class=HTMLResponse)
+async def read_root():
+    with open("static/index.html", "r", encoding="utf-8") as f:
+        html_content = f.read()
+    return HTMLResponse(content=html_content)
+
+# --- Montar la carpeta 'static' para servir otros archivos estáticos (CSS, JS, etc.) ---
+app.mount("/static", StaticFiles(directory="static"), name="static_assets")

@@ -1,0 +1,6 @@
+ Instrucciones finales:
+   1. Reinicia el servidor (python -m uvicorn main:app --reload).
+   2. Recarga el navegador (Ctrl + F5).
+   3. Navega a http://127.0.0.1:8000/ y abre la consola del navegador (F12).
+   4. Intenta el flujo de cancelación: "Quiero cancelar mi reserva." -> "Es a nombre de Juan para mañana." -> "sí".
+
