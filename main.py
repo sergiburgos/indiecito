@@ -1,3 +1,6 @@
+# Archivo principal de la aplicación FastAPI para Indio-Bot
+# Comentario trivial para forzar un redespliegue.
+
 import json
 import os
 import time
