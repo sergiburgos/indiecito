@@ -206,6 +206,36 @@ async def api_cancel_event(request: CancelEventRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# --- Endpoint de Depuración para Google Calendar ---
+@app.get("/api/debug_calendar")
+async def debug_calendar_connection():
+    """
+    Un endpoint de depuración para probar la conexión con Google Calendar.
+    """
+    try:
+        # Llama a la función que realiza la autenticación
+        service = get_calendar_service()
+        
+        # Si la obtención del servicio fue exitosa, lo confirmamos.
+        return {
+            "status": "SUCCESS",
+            "message": "La conexión y autenticación con Google Calendar funcionan correctamente."
+        }
+
+    except Exception as e:
+        # Si hay cualquier error durante la autenticación, lo capturamos.
+        import traceback
+        error_details = traceback.format_exc()
+        
+        # Devolvemos el error detallado para poder verlo en el navegador.
+        return {
+            "status": "ERROR",
+            "message": "Falló la autenticación con Google Calendar.",
+            "error_type": str(type(e)),
+            "error_details": str(e),
+            "traceback": error_details
+        }
+
 # --- Endpoint para servir el archivo HTML principal ---
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
