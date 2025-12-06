@@ -202,15 +202,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (result.status === 'success') {
                     systemMessage = `Sistema: La acción '${action}' con payload ${JSON.stringify(payload)} fue ejecutada exitosamente. El resultado es: ${JSON.stringify(result)}. Confirma al usuario de manera conversacional.`;
                 } else { // Si result.status es "error" o no es "success"
-                    // Construir el mensaje de error personalizado
                     let gestionType = "";
                     if (action === 'create_event') gestionType = "reserva";
                     else if (action === 'update_event') gestionType = "modificación";
                     else if (action === 'cancel_event') gestionType = "cancelación";
                     
-                    const customErrorMessage = `No hemos podido gestionar su ${gestionType} por problemas técnicos temporales. Puede probar de realizar la gestión más tarde o enviar un WhatsApp a Ingrid Villar al 3751 546964 para que le gestione su ${gestionType}.`;
-                    
-                    systemMessage = `Sistema: ${customErrorMessage} (Detalle técnico: ${result.message || 'Error desconocido'}). Informa al usuario de este mensaje personalizado.`;
+                    const customErrorMessage = `No hemos podido gestionar su ${gestionType}. El sistema de Google Calendar devolvió un error: **${result.message || 'Error desconocido'}**. Por favor, intente de nuevo o contacte a Ingrid Villar por WhatsApp.`;
+                    systemMessage = `Sistema: Informa al usuario de este error de forma clara y amigable: ${customErrorMessage}`;
                 }
             }
             await handleUserMessage(systemMessage, true);
@@ -223,9 +221,9 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (action === 'update_event') gestionType = "modificación";
             else if (action === 'cancel_event') gestionType = "cancelación";
 
-            const customErrorMessage = `No hemos podido gestionar su ${gestionType} por problemas técnicos temporales del sistema. Puede probar de realizar la gestión más tarde o enviar un WhatsApp a Ingrid Villar al 3751 546964 para que le gestione su ${gestionType}.`;
+            const customErrorMessage = `Ha ocurrido un error inesperado al intentar gestionar su ${gestionType}. Error de conexión: **${error.message}**. Por favor, intente de nuevo o contacte a Ingrid Villar por WhatsApp.`;
             
-            const systemMessage = `Sistema: ${customErrorMessage} (Detalle técnico: ${error.message}). Informa al usuario de este mensaje personalizado.`;
+            const systemMessage = `Sistema: Informa al usuario de este error de forma clara y amigable: ${customErrorMessage}`;
             await handleUserMessage(systemMessage, true);
         }
     }
