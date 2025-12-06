@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 import traceback
 
 # Importar las funciones de Google Calendar
-from google_calendar import create_calendar_event, list_calendar_events, update_calendar_event, cancel_calendar_event
+from google_calendar import create_calendar_event, list_calendar_events, update_calendar_event, cancel_calendar_event, get_calendar_service
 
 # --- Carga del Prompt de Sistema desde archivo ---
 def load_system_prompt():
