@@ -13,6 +13,18 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from dotenv import load_dotenv
 import traceback
+import locale
+
+# --- Configuración Regional para Fechas en Español ---
+# Intenta configurar el locale a español de España. Si falla, usa el genérico.
+try:
+    locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
+except locale.Error:
+    try:
+        locale.setlocale(locale.LC_TIME, 'es')
+    except locale.Error:
+        print("Advertencia: No se pudo configurar el locale a español. Los nombres de los días y meses podrían aparecer en inglés.")
+
 
 # Importar las funciones de Google Calendar
 from google_calendar import (
@@ -158,8 +170,8 @@ async def chat_handler(fastapi_request: FastAPIRequest, request: ChatRequest):
         client_last_request_times[client_ip] = time.time()
 
         # --- Prepara el mensaje con el contexto de la fecha actual ---
-        current_date_str = datetime.now().strftime("%Y-%m-%d")
-        message_with_context = f"Fecha actual: {current_date_str}. Mensaje del usuario: '{request.message}'"
+        current_date_str = datetime.now().strftime("Hoy es %A, %d de %B de %Y.")
+        message_with_context = f"Contexto de la fecha actual: {current_date_str}. Mensaje del usuario: '{request.message}'"
 
         # Usa el prompt global construido dinámicamente al inicio
         model = genai.GenerativeModel('models/gemini-flash-latest', system_instruction=SISTEMA_PROMPT)
