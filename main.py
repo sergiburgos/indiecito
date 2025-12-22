@@ -162,7 +162,7 @@ async def chat_handler(fastapi_request: FastAPIRequest, request: ChatRequest):
         message_with_context = f"Fecha actual: {current_date_str}. Mensaje del usuario: '{request.message}'"
 
         # Usa el prompt global construido dinámicamente al inicio
-        model = genai.GenerativeModel('gemini-1.5-flash-latest', system_instruction=SISTEMA_PROMPT)
+        model = genai.GenerativeModel('models/gemini-flash-latest', system_instruction=SISTEMA_PROMPT)
         chat = model.start_chat(history=request.history)
         response = await chat.send_message_async(message_with_context)
         
