@@ -248,6 +248,24 @@ def update_calendar_event(
     except Exception as e:
         return {"status": "error", "message": f"Error inesperado al actualizar evento: {str(e)}"}
 
+def test_calendar_connection() -> bool:
+    """
+    Realiza un chequeo de salud para verificar la conexión con Google Calendar.
+    Intenta hacer una llamada ligera (listar 1 evento) para confirmar que todo funciona.
+    """
+    try:
+        service = get_calendar_service()
+        # Realizar una llamada de solo lectura muy ligera para verificar la conexión
+        service.events().list(
+            calendarId='primary', 
+            maxResults=1
+        ).execute()
+        return True
+    except Exception as e:
+        # Imprime el error en el log del servidor para diagnóstico
+        print(f"Error en el chequeo de salud de Google Calendar: {e}")
+        return False
+
 # Ejemplo de uso
 if __name__ == "__main__":
     print("Obteniendo servicio de calendario...")

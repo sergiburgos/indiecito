@@ -5,7 +5,8 @@
       "use": "@vercel/python",
       "config": {
         "includeFiles": [
-          "prompt_indiecito.md"
+          "prompt_base.md",
+          "prompt_herramientas_calendario.md"
         ]
       }
     }
