@@ -295,6 +295,18 @@ async def debug_calendar_connection():
             "traceback": error_details
         }
 
+@app.get("/api/debug")
+async def debug():
+    """Endpoint de diagnóstico para verificar configuración."""
+    from poolside_client import get_poolside_api_key
+    api_key = get_poolside_api_key()
+    return {
+        "poolside_api_key_configured": bool(api_key and api_key != "YOUR_POOLSIDE_API_KEY"),
+        "reservas_activas": RESERVAS_ACTIVAS,
+        "calendario_disponible": CALENDARIO_DISPONIBLE,
+        "prompt_length": len(SISTEMA_PROMPT)
+    }
+
 # --- Endpoint para servir el archivo HTML principal ---
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
