@@ -3,3 +3,11 @@ token.json
 credentials.json
 venv/ 
 .env
+
+# Android/Capacitor
+android/
+node_modules/
+www/
+*.iml
+.idea/
+.DS_Store
