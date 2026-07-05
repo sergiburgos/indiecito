@@ -20,15 +20,15 @@ Las "Variables de Entorno" son una forma segura de guardar datos secretos (como 
 
 ## 2. Credenciales Clave y Cómo Obtenerlas
 
-Necesitas 4 claves secretas para que el proyecto funcione.
+Necesitas 3 claves secretas para que el proyecto funcione (la IA ahora usa Poolside).
 
-### a) `GOOGLE_API_KEY` (Para la IA de Gemini)
+### a) `POOLSIDE_API_KEY` (Para la IA laguna-m.1)
 
-*   **Propósito:** Permite que el bot se comunique con el modelo de lenguaje de Google (Gemini) para poder chatear.
+*   **Propósito:** Permite que el bot se comunique con el modelo de lenguaje Poolside (laguna-m.1) para poder chatear.
 *   **Dónde se consigue:**
-    1.  Ve a [Google AI Studio](https://aistudio.google.com/app/apikey) o a la [Consola de Google Cloud](https://console.cloud.google.com/apis/credentials).
-    2.  Crea una **"Clave de API"** nueva.
-*   **IMPORTANTE:** Si esta clave se expone (por ejemplo, al subir el archivo `.env` a GitHub), Google la bloqueará y el chat dejará de funcionar, devolviendo un error.
+    1.  Ve al [dashboard de Poolside](https://poolside.ai) o usa la API key que ya tienes configurada.
+    2.  Obtén tu **Clave de API** de Poolside.
+*   **IMPORTANTE:** Si esta clave se expone (por ejemplo, al subir el archivo `.env` a GitHub), Poolside la bloqueará y el chat dejará de funcionar, devolviendo un error.
 
 ### b) `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` (Para Google Calendar)
 
@@ -68,9 +68,9 @@ Necesitas 4 claves secretas para que el proyecto funcione.
     ```
 3.  **Crea tu archivo `.env`:**
     *   En la raíz del proyecto, crea un archivo llamado `.env`.
-    *   Dentro de él, pon las 4 claves que obtuviste:
+    *   Dentro de él, pon las 3 claves que obtuviste:
         ```
-        GOOGLE_API_KEY="AIzaSy...tu_clave_de_gemini"
+        POOLSIDE_API_KEY="tu_api_key_de_poolside"
         GOOGLE_CLIENT_ID="...apps.googleusercontent.com"
         GOOGLE_CLIENT_SECRET="GOCSPX-..."
         GOOGLE_REFRESH_TOKEN="1//04g..."
@@ -103,11 +103,11 @@ Necesitas 4 claves secretas para que el proyecto funcione.
 
 ### Problema: El chat no responde y da un error.
 
-*   **Causa más probable:** Tu `GOOGLE_API_KEY` ha sido expuesta y bloqueada por Google.
+*   **Causa más probable:** Tu `POOLSIDE_API_KEY` no está configurada o está incorrecta.
 *   **Solución:**
-    1.  Genera una nueva `GOOGLE_API_KEY` en Google AI Studio.
+    1.  Verifica que tienes una `POOLSIDE_API_KEY` válida.
     2.  Actualiza la variable de entorno en el **dashboard de Vercel**.
-    3.  En Vercel, ve a la pestaña "Deployments" y haz clic en "Redeploy" en el último despliegue para que tome la nueva clave.
+    3.  En Vercel, ve a la pestaña "Deployments" y haz clic en "Redeploy" en el último despliegue.
 
 ### Problema: El chat funciona, pero las reservas fallan con un error `403 Forbidden`.
 
