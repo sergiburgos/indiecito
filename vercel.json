@@ -6,7 +6,9 @@
       "config": {
         "includeFiles": [
           "prompt_base.md",
-          "prompt_herramientas_calendario.md"
+          "prompt_herramientas_calendario.md",
+          "poolside_client.py",
+          "google_calendar.py"
         ]
       }
     }
