@@ -3,7 +3,6 @@
   "appName": "IndioBot",
   "webDir": "static",
   "server": {
-    "url": "https://indio-bot-api.onrender.com",
-    "cleartext": false
+    "url": "https://indiecito.vercel.app"
   }
 }
