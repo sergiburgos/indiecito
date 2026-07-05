@@ -6,7 +6,6 @@ import time
 from datetime import datetime
 from typing import List, Dict, Any
 from contextlib import asynccontextmanager
-import google.generativeai as genai
 from fastapi import FastAPI, HTTPException, Request as FastAPIRequest
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -24,6 +23,9 @@ except locale.Error:
         locale.setlocale(locale.LC_TIME, 'es')
     except locale.Error:
         print("Advertencia: No se pudo configurar el locale a español. Los nombres de los días y meses podrían aparecer en inglés.")
+
+# Importar Poolside en lugar de Gemini
+from poolside_client import chat_with_poolside, get_poolside_api_key
 
 
 # Importar las funciones de Google Calendar
@@ -97,12 +99,10 @@ async def lifespan(app: FastAPI):
     print("--- Apagando la aplicación Indio-Bot ---")
 
 
-# --- Helper para extraer texto de la respuesta de forma segura ---
-def get_text_from_response(response: genai.types.GenerateContentResponse) -> str:
-    """Extrae de forma segura el contenido de texto de una respuesta de Gemini."""
-    if not response.parts:
-        return ""
-    return "".join(part.text for part in response.parts if hasattr(part, "text"))
+# --- Helper para extraer texto de la respuesta (compatibilidad Poolside) ---
+def get_text_from_response(response_text: str) -> str:
+    """Devuelve el texto de respuesta directamente (Poolside ya devuelve texto)."""
+    return response_text if response_text else ""
 
 # --- Rate Limiting por IP de cliente ---
 REQUEST_INTERVAL_SECONDS = 30
@@ -146,11 +146,10 @@ async def chat_handler(fastapi_request: FastAPIRequest, request: ChatRequest):
     y devuelve una respuesta de la IA, pudiendo usar herramientas.
     """
     try:
-        # --- Configuración de la API de Gemini (Just-in-Time) ---
-        api_key = os.getenv("GOOGLE_API_KEY")
-        if not api_key or api_key == "YOUR_API_KEY":
-            raise HTTPException(status_code=500, detail="Error: La clave de API de Google no está configurada en el entorno del servidor.")
-        genai.configure(api_key=api_key)
+        # --- Configuración de la API de Poolside (Just-in-Time) ---
+        api_key = get_poolside_api_key()
+        if not api_key or api_key == "YOUR_POOLSIDE_API_KEY":
+            raise HTTPException(status_code=500, detail="Error: La clave de API de Poolside no está configurada en el entorno del servidor.")
 
         client_ip = fastapi_request.client.host
         current_time = time.time()
@@ -173,12 +172,14 @@ async def chat_handler(fastapi_request: FastAPIRequest, request: ChatRequest):
         current_date_str = datetime.now().strftime("Hoy es %A, %d de %B de %Y.")
         message_with_context = f"Contexto de la fecha actual: {current_date_str}. Mensaje del usuario: '{request.message}'"
 
-        # Usa el prompt global construido dinámicamente al inicio
-        model = genai.GenerativeModel('models/gemini-flash-latest', system_instruction=SISTEMA_PROMPT)
-        chat = model.start_chat(history=request.history)
-        response = await chat.send_message_async(message_with_context)
+        # Usa el prompt global construido dinámicamente al inicio con Poolside
+        reply_text = await chat_with_poolside(
+            message=message_with_context,
+            history=request.history,
+            system_prompt=SISTEMA_PROMPT
+        )
         
-        reply_text = get_text_from_response(response)
+        reply_text = get_text_from_response(reply_text)
 
         if not reply_text:
             reply_text = json.dumps({"reply": "Lo siento, no pude generar una respuesta. Por favor, intenta reformular tu pregunta."})
