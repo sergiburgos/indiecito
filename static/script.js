@@ -86,7 +86,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function scrollToBottom() {
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+        // Scroll suave al final
+        chatMessages.scrollTo({
+            top: chatMessages.scrollHeight,
+            behavior: 'smooth'
+        });
     }
 
     // --- Lógica principal del Chat ---

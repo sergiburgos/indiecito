@@ -11,37 +11,40 @@
     --box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
+* {
+    box-sizing: border-box;
+}
+
 body {
     font-family: var(--font-family);
     background-color: var(--background-color);
     margin: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
+    padding: 0;
     color: var(--text-color-dark);
+    /* Usar dvh (dynamic viewport height) para móviles */
+    height: 100dvh;
+    height: 100vh;
 }
 
 .chat-container {
     width: 100%;
     max-width: 450px;
+    height: 100dvh;
     height: 100vh;
-    max-height: 100vh;
     display: flex;
     flex-direction: column;
     background: var(--chat-background);
-    border-radius: 20px;
-    box-shadow: var(--box-shadow);
-    overflow: hidden;
+    margin: 0 auto;
 }
 
 .chat-header {
     background: var(--header-background);
     color: var(--text-color-light);
-    padding: 15px 20px;
+    padding: 12px 20px;
     text-align: center;
     font-weight: 500;
     flex-shrink: 0;
+    /* Header siempre visible */
     position: sticky;
     top: 0;
     z-index: 100;
@@ -53,12 +56,15 @@ body {
 }
 
 .chat-messages {
-    flex-grow: 1;
-    padding: 20px;
+    flex: 1 1 auto;
+    padding: 15px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
     gap: 12px;
+    min-height: 0;
+    /* Asegurar scroll */
+    -webkit-overflow-scrolling: touch;
 }
 
 /* Scrollbar styles */
@@ -126,14 +132,17 @@ body {
 }
 
 .chat-input-form {
-    padding: 15px 20px;
+    padding: 10px 15px;
     border-top: 1px solid #e5e5ea;
     flex-shrink: 0;
+    /* Input siempre visible */
     position: sticky;
     bottom: 0;
     background: var(--chat-background);
-    /* Safe area for devices with notch */
-    padding-bottom: calc(15px + env(safe-area-inset-bottom));
+    /* Safe area para notch */
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0));
+    padding-left: calc(15px + env(safe-area-inset-left, 0));
+    padding-right: calc(15px + env(safe-area-inset-right, 0));
 }
 
 #chat-form {
@@ -142,12 +151,13 @@ body {
 }
 
 #message-input {
-    flex-grow: 1;
+    flex: 1 1 auto;
     border: 1px solid #d1d1d6;
     border-radius: 20px;
     padding: 10px 15px;
     font-size: 1rem;
     font-family: var(--font-family);
+    min-width: 0;
 }
 
 #message-input:focus {
@@ -167,6 +177,7 @@ body {
     align-items: center;
     cursor: pointer;
     transition: background-color 0.2s;
+    flex-shrink: 0;
 }
 
 #chat-form button:hover {
@@ -179,62 +190,14 @@ body {
     height: 20px;
 }
 
-/* --- Media Queries for Responsive Design --- */
-@media (max-width: 768px) {
-    body {
-        /* Remove alignment to allow chat to fill the screen */
-        align-items: flex-start;
-        /* Evita que el teclado cause scroll/zoom issues */
-        position: fixed;
-        width: 100%;
-        height: 100%;
-        overflow: hidden;
-    }
-
+/* Escritorio: mantener bordes redondeados */
+@media (min-width: 769px) {
     .chat-container {
-        width: 100%;
-        max-width: 100%;
-        height: 100vh;
-        max-height: 100vh;
-        border-radius: 0;
-        box-shadow: none;
-        /* Layout fijo para móviles */
-        display: flex;
-        flex-direction: column;
-    }
-
-    .chat-header {
-        flex-shrink: 0;
-        padding: 12px 15px;
-        /* Header fijo en móviles */
-        position: sticky;
-        top: 0;
-        z-index: 100;
-    }
-    
-    .chat-header h2 {
-        font-size: 1.1rem;
-    }
-
-    .chat-messages {
-        flex-grow: 1;
-        flex-shrink: 1;
-        flex-basis: 0;
-        padding: 15px;
-        overflow-y: auto;
-        /* Asegura que los mensajes no se oculten detrás del header */
-        padding-top: 0;
-        margin-top: 0;
-        min-height: 0;
-    }
-
-    .chat-input-form {
-        flex-shrink: 0;
-        padding: 10px 15px;
-        /* Input fijo en móviles */
-        position: sticky;
-        bottom: 0;
-        background: var(--chat-background);
-        border-top: 1px solid #e5e5ea;
+        border-radius: 20px;
+        box-shadow: var(--box-shadow);
+        margin: 20px auto;
+        height: calc(100dvh - 40px);
+        height: calc(100vh - 40px);
+        max-height: 700px;
     }
 }
