@@ -132,6 +132,8 @@ body {
     position: sticky;
     bottom: 0;
     background: var(--chat-background);
+    /* Safe area for devices with notch */
+    padding-bottom: calc(15px + env(safe-area-inset-bottom));
 }
 
 #chat-form {

@@ -20,6 +20,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Funciones principales de la interfaz ---
 
+    // --- Fix para móviles: scroll al abrir teclado ---
+    function handleMobileKeyboard() {
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) {
+            // Cuando el input recibe foco, scroll hacia abajo después de un pequeño delay
+            messageInput.addEventListener('focus', () => {
+                setTimeout(() => {
+                    scrollToBottom();
+                }, 300);
+            });
+        }
+    }
+
     function addMessage(sender, text, messageId = '') {
         const messageElement = document.createElement('div');
         messageElement.classList.add('message', sender);
@@ -230,6 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Mensaje de Bienvenida ---
     function initializeChat() {
+        handleMobileKeyboard();
         const welcomeMessage = "Hola, Mi nombre es Indio-Bot, Tu agente de IA para reservas de Heladeria y Cafeteria El Indiecito.";
         addMessage('bot', welcomeMessage);
         chatHistory.push({ role: 'model', parts: [{ text: welcomeMessage }] });
