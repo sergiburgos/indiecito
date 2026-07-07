@@ -3,8 +3,9 @@
 token.json
 credentials.json
 
-# Archivos de configuración
+# Archivos sensibles
 .env
+GOOGLE_CALENDAR_SETUP.md
 
 # Base de datos de contactos
 contacts.json
