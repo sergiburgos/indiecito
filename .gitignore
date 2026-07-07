@@ -1,8 +1,16 @@
 
+# Archivos de credenciales
 token.json
 credentials.json
-venv/ 
+
+# Archivos de configuración
 .env
+
+# Base de datos de contactos
+contacts.json
+
+# Entorno virtual y dependencias
+venv/ 
 
 # Android/Capacitor
 android/

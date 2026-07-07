@@ -18,3 +18,5 @@ services:
       - key: GOOGLE_REFRESH_TOKEN
         sync: false
         value: ""
+    # Los contactos se guardan en contacts.json en el directorio persistente
+    # En Vercel/Render, considerar usar una base de datos como PostgreSQL

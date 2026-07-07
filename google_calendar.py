@@ -108,12 +108,27 @@ def create_calendar_event(
 
         created_event = service.events().insert(calendarId=calendar_id, body=event).execute()
         
+        # Registrar el contacto de WhatsApp automáticamente
+        try:
+            from contacts_manager import register_reservation_contact
+            contact = register_reservation_contact(
+                summary=summary,
+                description=description or "",
+                event_id=created_event.get("id")
+            )
+            if contact:
+                print(f"Contacto WhatsApp registrado: {contact['name']} ({contact['phone']})")
+        except Exception as e:
+            # No fallar la creación del evento por error de registro de contactos
+            print(f"Advertencia: No se pudo registrar el contacto WhatsApp: {e}")
+        
         return {
             "status": "success",
             "id": created_event.get("id"), # Añadido el ID del evento
             "summary": created_event.get("summary"),
             "start": created_event["start"].get("dateTime"),
             "end": created_event["end"].get("dateTime"),
+            "contact_registered": bool(contact) if 'contact' in dir() else False
         }
 
     except HttpError as error:

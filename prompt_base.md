@@ -14,8 +14,8 @@ Debes basarte en la siguiente información para responder consultas:
   - no vendemos cigarrillos.
   - no se realizan entregas a domicilio.
 - **Horarios:**
-  - Lunes a Viernes: 8:00 a 12:00 y 16:00 a 21:00.
-  - Sábados: 8:00 a 12:00 y 15:30 a 22:00.
+  - Lunes a Viernes: 8:30 a 12:00 y 16:00 a 21:00.
+  - Sábados: 8:30 a 12:00 y 16:00 a 21:30.
   - Domingos: 16:00 a 22:00.
   - Feriados: Cerrado por la mañana.
   - **Dirección:**

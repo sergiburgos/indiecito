@@ -135,6 +135,14 @@ class UpdateEventRequest(BaseModel):
 class CancelEventRequest(BaseModel):
     event_id: str
 
+# --- Modelos para Contactos ---
+class ContactRequest(BaseModel):
+    name: str
+    phone: str
+
+class ContactsSearchRequest(BaseModel):
+    query: str
+
 # --- Inicialización de la Aplicación FastAPI ---
 app = FastAPI(lifespan=lifespan)
 
@@ -306,6 +314,50 @@ async def debug():
         "calendario_disponible": CALENDARIO_DISPONIBLE,
         "prompt_length": len(SISTEMA_PROMPT)
     }
+
+# --- Endpoints de Gestión de Contactos WhatsApp ---
+@app.post("/api/contacts/register")
+async def register_contact(request: ContactRequest):
+    """
+    Registra manualmente un contacto de WhatsApp.
+    """
+    from contacts_manager import add_or_update_contact
+    contact = add_or_update_contact(name=request.name, phone=request.phone)
+    return {"status": "success", "contact": contact}
+
+@app.get("/api/contacts")
+async def list_all_contacts():
+    """
+    Lista todos los contactos registrados.
+    """
+    from contacts_manager import load_contacts
+    contacts = load_contacts()
+    return {"contacts": contacts}
+
+@app.post("/api/contacts/search")
+async def search_contact(request: ContactsSearchRequest):
+    """
+    Busca contactos por nombre o teléfono.
+    """
+    from contacts_manager import find_contact_by_name, find_contact_by_phone
+    contact = find_contact_by_name(request.query)
+    if not contact:
+        contact = find_contact_by_phone(request.query)
+    if contact:
+        return {"status": "success", "contact": contact}
+    return {"status": "not_found", "message": "No se encontró el contacto."}
+
+@app.get("/api/contacts/phone/{phone}")
+async def get_contact_by_phone(phone: str):
+    """
+    Obtiene un contacto por su número de teléfono.
+    """
+    from contacts_manager import find_contact_by_phone, get_contact_history
+    contact = find_contact_by_phone(phone)
+    if contact:
+        history = get_contact_history(phone)
+        return {"status": "success", "contact": contact, "history": history}
+    return {"status": "not_found", "message": "No se encontró el contacto."}
 
 # --- Endpoint para servir el archivo HTML principal ---
 @app.get("/", response_class=HTMLResponse)

@@ -134,3 +134,36 @@ Necesitas 3 claves secretas para que el proyecto funcione (la IA ahora usa Pools
     3.  Ve a la pestaña "Application" -> "Clear storage".
     4.  Haz clic en "Clear site data".
     5.  Recarga la página.
+
+---
+
+## 6. Gestión de Contactos WhatsApp
+
+### ¿Qué es?
+
+Cuando se crea una reserva y el cliente proporciona su número de WhatsApp, este se guarda automáticamente en `contacts.json` para futuras referencias.
+
+### Endpoints de Contactos
+
+- **GET `/api/contacts`** - Lista todos los contactos registrados
+- **POST `/api/contacts/search`** - Busca un contacto por nombre o teléfono
+- **GET `/api/contacts/phone/{phone}`** - Obtiene un contacto específico con su historial
+
+### Formato del archivo contacts.json
+
+```json
+[
+  {
+    "id": 1,
+    "name": "Juan Pérez",
+    "phone": "+5491112345678",
+    "event_ids": ["abc123", "def456"],
+    "created_at": "2025-12-01T10:00:00",
+    "updated_at": "2025-12-01T10:00:00"
+  }
+]
+```
+
+### Nota Importante
+
+El archivo `contacts.json` está en `.gitignore` y **no se sube a GitHub**. Si necesitas persistencia en producción, considera usar una base de datos (PostgreSQL, MongoDB) en lugar de este archivo local.
