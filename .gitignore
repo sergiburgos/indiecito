@@ -11,7 +11,8 @@ GOOGLE_CALENDAR_SETUP.md
 contacts.json
 
 # Entorno virtual y dependencias
-venv/ 
+venv/
+__pycache__/
 
 # Android/Capacitor
 android/
