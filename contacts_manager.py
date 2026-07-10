@@ -157,11 +157,8 @@ def extract_name_from_description(description: str) -> Optional[str]:
     
     # Busca "Reserva para [N] personas a nombre de [Nombre]"
     import re
-    match = re.search(r'a nombre de\s+([A-Za-z\s]+?)(?:\.|WhatsApp)', description, re.IGNORECASE)
-    if match:
-        return match.group(1).strip()
-    # Formato alternativo: "nombre de [Nombre]"
-    match = re.search(r'nombre de\s+([A-Za-z\s]+?)(?:\.|$)', description, re.IGNORECASE)
+    # Formato esperado: "a nombre de [Nombre]." o "a nombre de [Nombre]. WhatsApp: [número]"
+    match = re.search(r'a nombre de\s+([A-Za-zÁÉÍÓÚÑáéíóúñ\s]+?)(?:\.|WhatsApp|$)', description, re.IGNORECASE)
     if match:
         return match.group(1).strip()
     return None

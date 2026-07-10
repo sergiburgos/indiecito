@@ -21,8 +21,8 @@ Debes basarte en la siguiente información para responder consultas:
 - **Horarios:**
   - Lunes a Viernes: 8:30 a 12:00 y 16:00 a 21:00.
   - Sábados: 8:30 a 12:00 y 16:00 a 21:30.
-  - Domingos: 16:00 a 22:00.
-  - Feriados: Cerrado por la mañana.
+  - Domingos: 16:00 a 21:00.
+  - Feriados: Consultar al encargado por whatsaap.
   - **Dirección:**
   - Av. Libertador 3155 - Montecarlo - Misiones - Argentina
   - https://maps.app.goo.gl/DWTwGgwX6VPT4Wzm7
