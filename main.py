@@ -14,6 +14,24 @@ from dotenv import load_dotenv
 import traceback
 import locale
 
+# --- Diccionario de traducción para fechas (fallback universal) ---
+SPANISH_DAYS = {
+    'Monday': 'Lunes', 'Tuesday': 'Martes', 'Wednesday': 'Miércoles',
+    'Thursday': 'Jueves', 'Friday': 'Viernes', 'Saturday': 'Sábado', 'Sunday': 'Domingo'
+}
+SPANISH_MONTHS = {
+    'January': 'Enero', 'February': 'Febrero', 'March': 'Marzo', 'April': 'Abril',
+    'May': 'Mayo', 'June': 'Junio', 'July': 'Julio', 'August': 'Agosto',
+    'September': 'Septiembre', 'October': 'Octubre', 'November': 'Noviembre', 'December': 'Diciembre'
+}
+
+def get_spanish_date() -> str:
+    """Devuelve la fecha actual en español, funciona en cualquier sistema."""
+    now = datetime.now()
+    day_name = SPANISH_DAYS.get(now.strftime('%A'), now.strftime('%A'))
+    month_name = SPANISH_MONTHS.get(now.strftime('%B'), now.strftime('%B'))
+    return f"Hoy es {day_name}, {now.strftime('%d')} de {month_name} de {now.strftime('%Y')}."
+
 # --- Configuración Regional para Fechas en Español ---
 # Intenta configurar el locale a español de España. Si falla, usa el genérico.
 try:
@@ -22,7 +40,8 @@ except locale.Error:
     try:
         locale.setlocale(locale.LC_TIME, 'es')
     except locale.Error:
-        print("Advertencia: No se pudo configurar el locale a español. Los nombres de los días y meses podrían aparecer en inglés.")
+        # Usar fallback de diccionario en lugar de imprimir advertencia
+        pass
 
 # Importar Poolside en lugar de Gemini
 from poolside_client import chat_with_poolside, get_poolside_api_key
@@ -177,7 +196,7 @@ async def chat_handler(fastapi_request: FastAPIRequest, request: ChatRequest):
         client_last_request_times[client_ip] = time.time()
 
         # --- Prepara el mensaje con el contexto de la fecha actual ---
-        current_date_str = datetime.now().strftime("Hoy es %A, %d de %B de %Y.")
+        current_date_str = get_spanish_date()
         message_with_context = f"Contexto de la fecha actual: {current_date_str}. Mensaje del usuario: '{request.message}'"
 
         # Usa el prompt global construido dinámicamente al inicio con Poolside
