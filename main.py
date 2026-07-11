@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 import traceback
 import locale
+from zoneinfo import ZoneInfo
 
 # --- Diccionario de traducción para fechas (fallback universal) ---
 SPANISH_DAYS = {
@@ -25,9 +26,12 @@ SPANISH_MONTHS = {
     'September': 'Septiembre', 'October': 'Octubre', 'November': 'Noviembre', 'December': 'Diciembre'
 }
 
+# Zona horaria de Argentina (Buenos Aires, UTC-3)
+ARGENTINA_TZ = ZoneInfo('America/Argentina/Buenos_Aires')
+
 def get_spanish_date() -> str:
-    """Devuelve la fecha actual en español, funciona en cualquier sistema."""
-    now = datetime.now()
+    """Devuelve la fecha actual en español, con zona horaria de Argentina."""
+    now = datetime.now(ARGENTINA_TZ)
     day_name = SPANISH_DAYS.get(now.strftime('%A'), now.strftime('%A'))
     month_name = SPANISH_MONTHS.get(now.strftime('%B'), now.strftime('%B'))
     return f"Hoy es {day_name}, {now.strftime('%d')} de {month_name} de {now.strftime('%Y')}."
