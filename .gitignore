@@ -11,7 +11,6 @@ GOOGLE_CALENDAR_SETUP.md
 contacts.json
 
 # Archivos generados por RAG (no subir al repo)
-faiss_index.bin
 chunks.pkl
 
 # Entorno virtual y dependencias

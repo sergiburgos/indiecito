@@ -1,59 +1,63 @@
 # -*- coding: utf-8 -*-
 """
 Módulo RAG (Retrieval-Augmented Generation) para Indio-Bot.
-Provee funciones para buscar contexto relevante en base de conocimiento.
+Versión ligera usando búsqueda por palabras clave (sin PyTorch).
+Compatible con Vercel sin exceder límites de tamaño.
 """
 import os
 import pickle
+import re
 from typing import List, Dict, Optional
-import faiss
-import numpy as np
-from sentence_transformers import SentenceTransformer
+from collections import Counter
 
 # --- Configuración ---
-FAISS_INDEX_FILE = "faiss_index.bin"
 CHUNKS_FILE = "chunks.pkl"
-EMBEDDING_MODEL_NAME = 'all-MiniLM-L6-v2'  # Modelo ligero (384 dimensiones)
 
 # --- Variables globales ---
-rag_index: Optional[faiss.Index] = None
 rag_chunks: Optional[List[Dict[str, str]]] = None
-embedding_model: Optional[SentenceTransformer] = None
+
+
+def _tokenize(text: str) -> List[str]:
+    """Tokeniza texto simple para búsqueda."""
+    # Normalizar y tokenizar
+    text = text.lower()
+    text = re.sub(r'[^\w\s]', ' ', text)
+    return [t for t in text.split() if len(t) > 2]  # Palabras > 2 chars
+
+
+def _calculate_score(query_tokens: List[str], content_tokens: List[str]) -> float:
+    """Calcula puntuación simple de coincidencia."""
+    if not query_tokens:
+        return 0.0
+    query_counter = Counter(query_tokens)
+    content_counter = Counter(content_tokens)
+    score = 0.0
+    for token, count in query_counter.items():
+        if token in content_counter:
+            score += min(count, content_counter[token])
+    return score / len(query_tokens)
 
 
 def load_rag_system() -> bool:
     """
-    Carga el índice FAISS y los chunks al inicio de la aplicación.
+    Carga los chunks al inicio de la aplicación (sin modelo de embeddings).
     
     Returns:
         True si se cargó correctamente, False en caso contrario.
     """
-    global rag_index, rag_chunks, embedding_model
+    global rag_chunks
     
     try:
-        # Cargar modelo de embeddings (solo una vez)
-        print(f"Cargando modelo de embeddings: {EMBEDDING_MODEL_NAME}")
-        embedding_model = SentenceTransformer(EMBEDDING_MODEL_NAME)
-        
-        # Cargar índice FAISS
-        if os.path.exists(FAISS_INDEX_FILE):
-            rag_index = faiss.read_index(FAISS_INDEX_FILE)
-            print(f"Índice FAISS cargado: {rag_index.ntotal} vectores")
-        else:
-            print(f"ADVERTENCIA: No se encontró '{FAISS_INDEX_FILE}'")
-            return False
-        
         # Cargar chunks
         if os.path.exists(CHUNKS_FILE):
             with open(CHUNKS_FILE, "rb") as f:
                 rag_chunks = pickle.load(f)
             print(f"Chunks cargados: {len(rag_chunks)} fragmentos")
+            return True
         else:
             print(f"ADVERTENCIA: No se encontró '{CHUNKS_FILE}'")
             return False
             
-        return True
-        
     except Exception as e:
         print(f"ERROR al cargar sistema RAG: {e}")
         return False
@@ -61,7 +65,7 @@ def load_rag_system() -> bool:
 
 async def get_rag_context(query: str, top_k: int = 3) -> str:
     """
-    Busca en el índice RAG los chunks más relevantes para una consulta dada.
+    Busca chunks relevantes usando coincidencia de palabras clave (sin embeddings).
     
     Args:
         query: Texto de consulta del usuario
@@ -70,36 +74,43 @@ async def get_rag_context(query: str, top_k: int = 3) -> str:
     Returns:
         Texto con el contexto concatenado o mensaje de error vacío si no hay resultados.
     """
-    global rag_index, rag_chunks, embedding_model
+    global rag_chunks
     
-    if rag_index is None or rag_chunks is None or embedding_model is None:
-        return "ADVERTENCIA: El sistema RAG no está disponible. Ejecuta 'python build_rag_index.py' para crear el índice."
+    if rag_chunks is None:
+        return ""
     
     try:
-        # Generar embedding para la consulta
-        query_embedding = embedding_model.encode([query], convert_to_numpy=True).astype("float32")
+        query_tokens = _tokenize(query)
+        if not query_tokens:
+            return ""
         
-        # Buscar en el índice FAISS
-        distances, indices = rag_index.search(query_embedding, top_k)
+        # Calcular puntuaciones
+        scored_chunks = []
+        for i, chunk in enumerate(rag_chunks):
+            content_tokens = _tokenize(chunk["content"])
+            score = _calculate_score(query_tokens, content_tokens)
+            if score > 0:
+                scored_chunks.append((score, i, chunk))
         
-        context_chunks = []
-        for idx in indices[0]:
-            if idx >= 0 and idx < len(rag_chunks):
-                chunk = rag_chunks[idx]
+        # Ordenar por puntuación y tomar top_k
+        scored_chunks.sort(key=lambda x: x[0], reverse=True)
+        top_chunks = scored_chunks[:top_k]
+        
+        if top_chunks:
+            context_chunks = []
+            for score, idx, chunk in top_chunks:
                 context_chunks.append(f"--- Documento: {chunk['source']} ---\n{chunk['content']}")
-        
-        if context_chunks:
             return "\n\nContexto de la base de conocimiento:\n" + "\n\n".join(context_chunks)
         else:
             return ""  # No se encontró contexto relevante
             
     except Exception as e:
         print(f"ERROR en la búsqueda RAG: {e}")
-        return f"ADVERTENCIA: Falló la búsqueda en la base de conocimiento ({e})."
+        return ""
 
 
 def is_rag_available() -> bool:
     """
     Verifica si el sistema RAG está listo para usar.
     """
-    return rag_index is not None and rag_chunks is not None and embedding_model is not None
+    return rag_chunks is not None
