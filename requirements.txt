@@ -35,3 +35,8 @@ uritemplate==4.2.0
 urllib3==2.5.0
 tzdata>=2024.1
 uvicorn==0.38.0
+
+# RAG dependencies (local embeddings, no Google API)
+faiss-cpu
+sentence-transformers
+langchain-text-splitters

@@ -61,6 +61,9 @@ from google_calendar import (
     test_calendar_connection
 )
 
+# Importar sistema RAG
+from rag_system import load_rag_system, get_rag_context, is_rag_available
+
 # --- Configuración y Estado Global ---
 # Carga las variables de entorno del archivo .env
 load_dotenv()
@@ -79,7 +82,7 @@ SISTEMA_PROMPT = ""
 async def lifespan(app: FastAPI):
     """
     Gestiona el ciclo de vida de la aplicación. Se ejecuta al iniciar 
-    para configurar el prompt y verificar la conexión con el calendario.
+    para configurar el prompt y verificar la conexión con el calendario y RAG.
     """
     global SISTEMA_PROMPT, CALENDARIO_DISPONIBLE
 
@@ -96,14 +99,20 @@ async def lifespan(app: FastAPI):
         SISTEMA_PROMPT = "Eres un asistente servicial."
         print("ADVERTENCIA: No se encontró 'prompt_base.md'. Usando prompt de fallback.")
 
-    # 2. Verificar si las reservas están activadas por configuración
+    # 2. Cargar sistema RAG (si existe)
+    if load_rag_system():
+        print("Sistema RAG cargado exitosamente.")
+    else:
+        print("ADVERTENCIA: Sistema RAG no disponible. Ejecuta 'python build_rag_index.py' para crear el índice.")
+
+    # 3. Verificar si las reservas están activadas por configuración
     if RESERVAS_ACTIVAS:
         print("Configuración de reservas activada. Intentando verificar conexión con Google Calendar...")
-        # 3. Si están activadas, chequear la conexión real con Google Calendar
+        # 4. Si están activadas, chequear la conexión real con Google Calendar
         if test_calendar_connection():
             print("Conexión con Google Calendar exitosa.")
             CALENDARIO_DISPONIBLE = True
-            # 4. Si la conexión es exitosa, añadir las herramientas de calendario al prompt
+            # 5. Si la conexión es exitosa, añadir las herramientas de calendario al prompt
             try:
                 with open(os.path.join(base_path, 'prompt_herramientas_calendario.md'), "r", encoding="utf-8") as f:
                     SISTEMA_PROMPT += "\n\n" + f.read()
@@ -199,9 +208,23 @@ async def chat_handler(fastapi_request: FastAPIRequest, request: ChatRequest):
         
         client_last_request_times[client_ip] = time.time()
 
-        # --- Prepara el mensaje con el contexto de la fecha actual ---
+        # --- Prepara el mensaje con el contexto de la fecha actual y RAG ---
         current_date_str = get_spanish_date()
-        message_with_context = f"Contexto de la fecha actual: {current_date_str}. Mensaje del usuario: '{request.message}'"
+        
+        # Obtener contexto RAG si está disponible
+        rag_context = ""
+        if is_rag_available():
+            rag_context = await get_rag_context(request.message)
+        
+        # Estructura el mensaje con contexto RAG primero (prioridad)
+        if rag_context:
+            message_with_context = (
+                f"{rag_context}\n\n"
+                f"Contexto de la fecha actual: {current_date_str}. "
+                f"Mensaje del usuario: '{request.message}'"
+            )
+        else:
+            message_with_context = f"Contexto de la fecha actual: {current_date_str}. Mensaje del usuario: '{request.message}'"
 
         # Usa el prompt global construido dinámicamente al inicio con Poolside
         reply_text = await chat_with_poolside(
@@ -331,10 +354,19 @@ async def debug():
     """Endpoint de diagnóstico para verificar configuración."""
     from poolside_client import get_poolside_api_key
     api_key = get_poolside_api_key()
+    
+    # Información del sistema RAG
+    rag_chunks_count = 0
+    if is_rag_available():
+        from rag_system import rag_chunks
+        rag_chunks_count = len(rag_chunks) if rag_chunks else 0
+    
     return {
         "poolside_api_key_configured": bool(api_key and api_key != "YOUR_POOLSIDE_API_KEY"),
         "reservas_activas": RESERVAS_ACTIVAS,
         "calendario_disponible": CALENDARIO_DISPONIBLE,
+        "rag_disponible": is_rag_available(),
+        "rag_chunks_count": rag_chunks_count,
         "prompt_length": len(SISTEMA_PROMPT)
     }
 

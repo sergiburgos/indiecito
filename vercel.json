@@ -9,7 +9,11 @@
           "prompt_herramientas_calendario.md",
           "poolside_client.py",
           "google_calendar.py",
-          "contacts_manager.py"
+          "contacts_manager.py",
+          "rag_system.py",
+          "faiss_index.bin",
+          "chunks.pkl",
+          "knowledge_base/**"
         ]
       }
     }

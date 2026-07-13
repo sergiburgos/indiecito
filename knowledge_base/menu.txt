@@ -1,0 +1,16 @@
+# Menú de Helados Artesanales
+
+## Presentaciones
+- BOCHA CHICA
+- HELADO DE 1 GUSTO
+- HELADO DE 2 GUSTOS
+- HELADO DE 3 GUSTOS
+- 1/4 KG DE HELADO
+- 1/2 KG DE HELADO
+- 1 KILO DE HELADO
+- 2 KILOS DE HELADO
+- 3 KILOS DE HELADO
+
+## Especialidades
+- Fiesta Infantil (copa helada para niños con 3 bochas, cucurucho de oblea payaso)
+- TORTA HELADA (barra de helado almendrado, ideal para llevar)
