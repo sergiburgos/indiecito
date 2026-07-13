@@ -4,7 +4,7 @@
 - Helado de frutilla: /static/images/helado_frutilla.jpg
 - Helado de dulce de leche: /static/images/helado_dulce_de_leche.jpg
 - Waffle especial: /static/images/waffle_especial.jpg
-- Copa helada: /static/images/copa_helada.jpg
+- Copa helada: /static/images/copa_frutilla.jpg
 - Torta helada: /static/images/torta_helada.jpg
 
 ## Uso
