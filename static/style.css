@@ -28,7 +28,7 @@ body {
 
 .chat-container {
     width: 100%;
-    max-width: 450px;
+    max-width: 540px;
     height: 100dvh;
     height: 100vh;
     display: flex;
@@ -198,6 +198,7 @@ body {
         margin: 20px auto;
         height: calc(100dvh - 40px);
         height: calc(100vh - 40px);
-        max-height: 700px;
+        max-height: 800px;
+        max-width: 540px;
     }
 }
